@@ -4,8 +4,10 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_events.h>
 
-const int WIDTH = 160;
-const int HEIGHT = 160;
+const int WIDTH = 320;
+const int HEIGHT = 240;
+
+const int BULLETCACHE = 20;
 
 int main() {
 	SDL_Window *w;
@@ -20,7 +22,7 @@ int main() {
 		return 1;
 	}
 
-	w = SDL_CreateWindow("space shooty", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
+	w = SDL_CreateWindow("space shooty", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
 	if (!w) {
 		SDL_Log("error creating window; %s", SDL_GetError());
 		SDL_Quit();
@@ -66,6 +68,15 @@ int main() {
 	SDL_Rect playerSrc = { .x = 16 * 4, .y = 16 * 14, .w = 16, .h = 16 };
 	SDL_Rect playerDest = { .x = 0, .y = 0, .w = 16, .h = 16 };
 	int up = 0, down = 0, vel = 0;
+	uint32_t nextShoot = 0, nextMove = 0;
+	uint32_t shootTime = 1000 * 0.2, moveTime = 1000 * 0.1;
+
+	SDL_Rect bulletSrc = { .x = 16 * 13, .y = 16 * 2, .w = 16, .h = 16 };
+	SDL_Rect bullets[BULLETCACHE];
+	int i;
+	for (i = 0; i < BULLETCACHE; i++) {
+		bullets[i].x = -1;
+	}
 
 	SDL_Event e;
 	int q = 0;
@@ -79,6 +90,8 @@ int main() {
 				q = 1;
 				break;
 			case SDL_KEYDOWN:
+				if (!up && !down && SDL_GetTicks() >= nextMove)
+					nextMove = SDL_GetTicks() + moveTime;
 				switch (e.key.keysym.scancode) {
 					case SDL_SCANCODE_W:
 					case SDL_SCANCODE_UP:
@@ -87,6 +100,17 @@ int main() {
 					case SDL_SCANCODE_S:
 					case SDL_SCANCODE_DOWN:
 						down = 1;
+						break;
+					case SDL_SCANCODE_SPACE:
+						if (SDL_GetTicks() >= nextShoot) {
+							for (i = 0; i < BULLETCACHE; i++) {
+								if (bullets[i].x == -1) {
+									bullets[i] = playerDest;
+									break;
+								}
+							}
+							nextShoot = SDL_GetTicks() + shootTime;
+						}
 						break;
 				}
 				break;
@@ -103,8 +127,28 @@ int main() {
 				}
 		}
 
+		vel = 0;
+		if ((SDL_GetTicks() >= nextMove) && (up || down)) {
+			if ((up && !down) && playerDest.y > 0) vel = -16;
+			if ((down && !up) && playerDest.y <= HEIGHT - playerDest.h * 2) vel = 16;
+			playerDest.y += vel;
+			nextMove = SDL_GetTicks() + moveTime;
+		}
+
 		SDL_RenderClear(r);
+		SDL_SetTextureColorMod(t, 255, 255, 255);
 		SDL_RenderCopy(r, t, &playerSrc, &playerDest);
+		SDL_SetTextureColorMod(t, 255, 255, 0);
+		for (i = 0; i < BULLETCACHE; i++) {
+			if (bullets[i].x != -1) {
+				if (bullets[i].x < WIDTH) {
+					bullets[i].x += 16;
+					SDL_RenderCopy(r, t, &bulletSrc, &bullets[i]);
+				} else {
+					bullets[i].x = -1;
+				}
+			}
+		}
 		SDL_RenderPresent(r);
 		if ((now = SDL_GetTicks())- start < 1000)
 			SDL_Delay((1000 - (now - start)) / 60);
