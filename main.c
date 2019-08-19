@@ -74,7 +74,7 @@ int main() {
 
 	SDL_Rect bulletSrc = { .x = 16 * 13, .y = 16 * 2, .w = 16, .h = 16 };
 	SDL_Rect bullets[BULLETCACHE];
-	int i;
+	int i, j;
 	for (i = 0; i < BULLETCACHE; i++) {
 		bullets[i].x = -1;
 	}
@@ -175,7 +175,15 @@ int main() {
 			if (bullets[i].x != -1) {
 				if (bullets[i].x < WIDTH) {
 					bullets[i].x += 16;
-					SDL_RenderCopy(r, t, &bulletSrc, &bullets[i]);
+					for (j = 0; j < 20; j++) {
+						if (bullets[i].x == enemies[j].x && bullets[i].y == enemies[j].y) {
+							enemies[j].x = WIDTH + 16;
+							bullets[i].x = -1;;
+							continue;
+						}
+					}
+					if (bullets[i].x != -1)
+						SDL_RenderCopy(r, t, &bulletSrc, &bullets[i]);
 				} else {
 					bullets[i].x = -1;
 				}
