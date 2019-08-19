@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_render.h>
@@ -6,7 +7,7 @@
 #include <SDL2/SDL_events.h>
 
 const int WIDTH = 320;
-const int HEIGHT = 240;
+const int HEIGHT = 226;
 
 const int BULLETCACHE = 20;
 
@@ -23,7 +24,7 @@ int main() {
 		return 1;
 	}
 
-	w = SDL_CreateWindow("space shooty", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
+	w = SDL_CreateWindow("space shooty", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT+16, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
 	if (!w) {
 		SDL_Log("error creating window; %s", SDL_GetError());
 		SDL_Quit();
@@ -72,9 +73,32 @@ int main() {
 	uint32_t nextShoot = 0, nextMove = 0;
 	uint32_t shootTime = 1000 * 0.2, moveTime = 1000 * 0.1;
 
+	SDL_Rect blockSrc = { .x = 16 * 11, .y = 16 * 13, .w = 16, .h = 16 };
+	SDL_Rect blockDest = { .y = HEIGHT, .w = 16, .h = 16 };
+	SDL_Rect numSrc[10];
+	int i, j;
+	int numY = 16 * 3;
+	for (i = 0; i < 10; i++) {
+		numSrc[i].x = 16 * i;
+		numSrc[i].y = numY;
+		numSrc[i].w = 16;
+		numSrc[i].h = 16;
+	}
+
+	uint32_t score = 0;
+	char scoreStr[10];
+	SDL_Rect scoreSrc[5] = {
+		{48, 80, 16, 16},
+		{48, 96, 16, 16},
+		{240, 96, 16, 16},
+		{32, 112, 16, 16},
+		{80, 96, 16, 16},
+	};
+	SDL_Rect scoreDest = { .y = HEIGHT, .w = 16, .h = 16 };
+
+
 	SDL_Rect bulletSrc = { .x = 16 * 13, .y = 16 * 2, .w = 16, .h = 16 };
 	SDL_Rect bullets[BULLETCACHE];
-	int i, j;
 	for (i = 0; i < BULLETCACHE; i++) {
 		bullets[i].x = -1;
 	}
@@ -179,6 +203,7 @@ int main() {
 						if (bullets[i].x == enemies[j].x && bullets[i].y == enemies[j].y) {
 							enemies[j].x = WIDTH + 16;
 							bullets[i].x = -1;;
+							++score;
 							continue;
 						}
 					}
@@ -205,6 +230,25 @@ int main() {
 		}
 		if (SDL_GetTicks() >= nextEnemyMove) {
 			nextEnemyMove = SDL_GetTicks() + enemyMoveTime;
+		}
+
+
+		SDL_SetTextureColorMod(t, 192, 192, 192);
+		for (i = 0; i < WIDTH / 16; i++) {
+			blockDest.x = 16 * i;
+			SDL_RenderCopy(r, t, &blockSrc, &blockDest);
+		}
+		SDL_SetTextureColorMod(t, 0, 0, 0);
+		for (i = 0; i < 5; i++) {
+			scoreDest.x = 16 * i;
+			SDL_RenderCopy(r, t, &scoreSrc[i], &scoreDest);
+		}
+
+		scoreDest.x = WIDTH;
+		sprintf(scoreStr, "%d", score);
+		for (i = strlen(scoreStr) - 1; i >= 0; i--) {
+			scoreDest.x -= 16;
+			SDL_RenderCopy(r, t, &numSrc[scoreStr[i]-48], &scoreDest);
 		}
 
 		SDL_RenderPresent(r);
