@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_render.h>
@@ -78,6 +79,18 @@ int main() {
 		bullets[i].x = -1;
 	}
 
+	SDL_Rect enemySrc = { .x = 16, .y = 16, .w = 16, .h = 16};
+	SDL_Rect enemies[20];
+	for (i = 0; i < 20; i++) {
+		enemies[i].x = WIDTH + 16;
+		enemies[i].w = 16;
+		enemies[i].h = 16;
+	}
+	uint32_t enemySpawnTime = 1000 * 3, nextEnemy = 0;
+	uint32_t enemyMoveTime = 1000 * 1, nextEnemyMove = 0;
+	uint32_t enemySpawns = 2;
+	uint32_t enemyCount = enemySpawns;
+
 	SDL_Event e;
 	int q = 0;
 	uint32_t start, now;
@@ -138,6 +151,25 @@ int main() {
 		SDL_RenderClear(r);
 		SDL_SetTextureColorMod(t, 255, 255, 255);
 		SDL_RenderCopy(r, t, &playerSrc, &playerDest);
+
+		if (SDL_GetTicks() >= nextEnemy) {
+			if (enemyCount > 0) {
+				for (i = 0; i < 20; i++) {
+					if (enemies[i].x == WIDTH + 16) {
+						enemies[i].x -= 16;
+						enemies[i].y = (rand() % (HEIGHT / 16 + 1)) * 16;
+						break;
+					}
+				}
+				--enemyCount;
+				nextEnemy = SDL_GetTicks() + enemySpawnTime;
+			} else {
+				enemySpawns *= 2;
+				enemyCount = enemySpawns;
+				nextEnemy = SDL_GetTicks() + enemySpawnTime * 2;
+			}
+		}
+
 		SDL_SetTextureColorMod(t, 255, 255, 0);
 		for (i = 0; i < BULLETCACHE; i++) {
 			if (bullets[i].x != -1) {
@@ -149,6 +181,24 @@ int main() {
 				}
 			}
 		}
+
+		SDL_SetTextureColorMod(t, 255, 0, 0);
+		for (i = 0; i < 20; i++) {
+			if (enemies[i].x <= WIDTH) {
+				if (SDL_GetTicks() >= nextEnemyMove) {
+					if (enemies[i].x == 0) {
+						enemies[i].x = WIDTH + 16;
+					} else {
+						enemies[i].x -= 16;
+					}
+				}
+				SDL_RenderCopy(r, t, &enemySrc, &enemies[i]);
+			}
+		}
+		if (SDL_GetTicks() >= nextEnemyMove) {
+			nextEnemyMove = SDL_GetTicks() + enemyMoveTime;
+		}
+
 		SDL_RenderPresent(r);
 		if ((now = SDL_GetTicks())- start < 1000)
 			SDL_Delay((1000 - (now - start)) / 60);
